@@ -50,21 +50,11 @@ class UAGGANModel(BaseModel):
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
 
-        self.netG_img_A = uag.define_net_img(opt.input_nc,
-                                             opt.output_nc,
-                                             opt.ngf,
-                                             norm=opt.norm,
-                                             init_type=opt.init_type,
-                                             init_gain=opt.init_gain,
-                                             gpu_ids=opt.gpu_ids)
+        self.netG_img_A = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
+                                        not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         
-        self.netG_img_B = uag.define_net_img(opt.input_nc,
-                                             opt.output_nc,
-                                             opt.ngf,
-                                             norm=opt.norm,
-                                             init_type=opt.init_type,
-                                             init_gain=opt.init_gain,
-                                             gpu_ids=opt.gpu_ids)
+        self.netG_img_B =  networks.define_G(opt.output_nc, opt.input_nc, opt.ngf, opt.netG, opt.norm,
+                                        not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
 
 
         if self.isTrain:
