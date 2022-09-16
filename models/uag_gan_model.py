@@ -99,10 +99,10 @@ class UAGGANModel(BaseModel):
 
         
         #Definisco i layer che utilizzo e inizializzo gradcamA e gradcamB (senza i layer)
-        self.first_layer = "17"
-        self.layers = []
-        self.gradcamG_A = GradCam(model=self.netG_img_A, discriminator=self.netD_A, feature_module=self.netG_img_A.module.model, use_cuda=True)
-        self.gradcamG_B = GradCam(model=self.netG_img_B, discriminator=self.netD_B, feature_module=self.netG_img_B.module.model, use_cuda=True)
+        # self.first_layer = "17"
+        # self.layers = []
+        # self.gradcamG_A = GradCam(model=self.netG_img_A, discriminator=self.netD_A, feature_module=self.netG_img_A.module.model, use_cuda=True)
+        # self.gradcamG_B = GradCam(model=self.netG_img_B, discriminator=self.netD_B, feature_module=self.netG_img_B.module.model, use_cuda=True)
 
 
     def set_input(self, input):
@@ -118,57 +118,77 @@ class UAGGANModel(BaseModel):
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
-    def forward(self):
+    # def forward(self):
 
-        #img fake generate
-        self.fake_B = self.netG_img_A(self.real_A) # G_A(A)
-        self.fake_A = self.netG_img_B(self.real_B) # G_B(B)
+    #     #img fake generate
+    #     self.fake_B = self.netG_img_A(self.real_A) # G_A(A)
+    #     self.fake_A = self.netG_img_B(self.real_B) # G_B(B)
 
          
-        horse = self.real_A.requires_grad_(True)   
-        #Genero mappa di attenzione per il primo layer inizializzando self.cam_fake_B
-        self.cam_fake_B = self.gradcamG_A(horse,self.first_layer,None)
-        self.cam_fake_B = self.cam_fake_B.unsqueeze(0)
+    #     horse = self.real_A.requires_grad_(True)   
+    #     #Genero mappa di attenzione per il primo layer inizializzando self.cam_fake_B
+    #     self.cam_fake_B = self.gradcamG_A(horse,self.first_layer,None)
+    #     self.cam_fake_B = self.cam_fake_B.unsqueeze(0)
       
 
-        #Applico lo stesso ragionamento per l'immagine ricostruita
+    #     #Applico lo stesso ragionamento per l'immagine ricostruita
 
-        self.rec_A = self.netG_img_B(self.fake_B)   # G_B(G_A(A))
-        horseRec = self.rec_A.detach().requires_grad_(True)
-        self.cam_rec_A = self.gradcamG_B(horseRec,self.first_layer,None).unsqueeze(0)
+    #     self.rec_A = self.netG_img_B(self.fake_B)   # G_B(G_A(A))
+    #     horseRec = self.rec_A.detach().requires_grad_(True)
+    #     self.cam_rec_A = self.gradcamG_B(horseRec,self.first_layer,None).unsqueeze(0)
        
-        #In modo duale a quanto fatto sopra lo faccio per cavallozebra (fake_A) 
+    #     #In modo duale a quanto fatto sopra lo faccio per cavallozebra (fake_A) 
 
      
-        zebra = self.real_B.requires_grad_(True)
-        self.cam_fake_A = self.gradcamG_B(zebra,self.first_layer,None).unsqueeze(0)
-        # for name in (self.layers):
-        #     self.cam_fake_A = torch.cat((self.gradcamG_B(zebra,name,None).unsqueeze(0),self.cam_fake_A),dim=0)
+    #     zebra = self.real_B.requires_grad_(True)
+    #     self.cam_fake_A = self.gradcamG_B(zebra,self.first_layer,None).unsqueeze(0)
+    #     # for name in (self.layers):
+    #     #     self.cam_fake_A = torch.cat((self.gradcamG_B(zebra,name,None).unsqueeze(0),self.cam_fake_A),dim=0)
 
-        #Come prima applico gradcam per la ricostruzione
+    #     #Come prima applico gradcam per la ricostruzione
 
-        self.rec_B = self.netG_img_A(self.fake_A)   # G_A(G_B(B))
-        zebraRec = self.rec_B.detach().requires_grad_(True)
-        self.cam_rec_B = self.gradcamG_A(zebraRec,self.first_layer,None).unsqueeze(0)
-
-
+    #     self.rec_B = self.netG_img_A(self.fake_A)   # G_A(G_B(B))
+    #     zebraRec = self.rec_B.detach().requires_grad_(True)
+    #     self.cam_rec_B = self.gradcamG_A(zebraRec,self.first_layer,None).unsqueeze(0)
 
 
+    #     """Run forward pass; called by both functions <optimize_parameters> and <test>."""
+    #     # G(A) -> B
+    #     self.att_A = self.netG_att_A(self.real_A)
+        
+    #     if not self.isTrain:
+    #         self.att_A *= (self.att_A>self.opt.thresh).float()
+    #     self.masked_fake_B = self.fake_B*self.att_A + self.real_A*(1-self.att_A)
+    #     # G(B) -> A
+    #     self.att_B = self.netG_att_B(self.real_B)
+        
+    #     if not self.isTrain:
+    #         self.att_B *= (self.att_B>self.opt.thresh).float()
+    #     self.masked_fake_A = self.fake_A*self.att_B + self.real_B*(1-self.att_B)
 
+    #     # cycle G(G(A)) -> A
+    #     self.cycle_att_B = self.netG_att_B(self.masked_fake_B)
+    #     self.cycle_fake_A = self.netG_img_B(self.masked_fake_B)
+    #     self.cycle_masked_fake_A = self.cycle_fake_A*self.cycle_att_B + self.masked_fake_B*(1-self.cycle_att_B)
+    #     # cycle G(G(B)) -> B
+    #     self.cycle_att_A = self.netG_att_A(self.masked_fake_A)
+    #     self.cycle_fake_B = self.netG_img_A(self.masked_fake_A)
+    #     self.cycle_masked_fake_B = self.cycle_fake_B*self.cycle_att_A + self.masked_fake_A*(1-self.cycle_att_A)
 
+    #     # just for visualization
+    #     self.att_A_viz, self.att_B_viz = (self.att_A-0.5)/0.5, (self.att_B-0.5)/0.5
 
-
-
+    def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         # G(A) -> B
         self.att_A = self.netG_att_A(self.real_A)
-        
+        self.fake_B = self.netG_img_A(self.real_A)
         if not self.isTrain:
             self.att_A *= (self.att_A>self.opt.thresh).float()
         self.masked_fake_B = self.fake_B*self.att_A + self.real_A*(1-self.att_A)
         # G(B) -> A
         self.att_B = self.netG_att_B(self.real_B)
-        
+        self.fake_A = self.netG_img_B(self.real_B)
         if not self.isTrain:
             self.att_B *= (self.att_B>self.opt.thresh).float()
         self.masked_fake_A = self.fake_A*self.att_B + self.real_B*(1-self.att_B)
@@ -241,16 +261,17 @@ class UAGGANModel(BaseModel):
         self.loss_cycle_A = self.criterionCycle(self.cycle_masked_fake_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.cycle_masked_fake_B, self.real_B) * lambda_B
+
         #Faccio Unsqueeze per ottenere la dimensione conforme all'applicazione della loss
-        self.cam_fake_B = self.cam_fake_B.unsqueeze(1)
-        self.cam_rec_A = self.cam_rec_A.unsqueeze(1)
-        self.cam_fake_A = self.cam_fake_A.unsqueeze(1)
-        self.cam_rec_B = self.cam_rec_B.unsqueeze(1)
-        #Calcolo le loss
-        self.att_lossA2B = self.MSE_LOSS(self.cam_fake_B,self.cam_rec_A)
-        self.att_lossB2A = self.MSE_LOSS(self.cam_fake_A,self.cam_rec_B)
+        # self.cam_fake_B = self.cam_fake_B.unsqueeze(1)
+        # self.cam_rec_A = self.cam_rec_A.unsqueeze(1)
+        # self.cam_fake_A = self.cam_fake_A.unsqueeze(1)
+        # self.cam_rec_B = self.cam_rec_B.unsqueeze(1)
+        # #Calcolo le loss
+        # self.att_lossA2B = self.MSE_LOSS(self.cam_fake_B,self.cam_rec_A)
+        # self.att_lossB2A = self.MSE_LOSS(self.cam_fake_A,self.cam_rec_B)
         # combined loss and calculate gradients
-        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_cycle_A + self.loss_cycle_B + self.att_lossA2B + self.att_lossB2A
+        self.loss_G = self.loss_G_A + self.loss_G_B + self.loss_cycle_A + self.loss_cycle_B # + self.att_lossA2B + self.att_lossB2A
         self.loss_G.backward()
     
     def optimize_parameters(self, epoch):
