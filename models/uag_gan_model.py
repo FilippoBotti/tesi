@@ -99,7 +99,7 @@ class UAGGANModel(BaseModel):
 
         
         #Definisco i layer che utilizzo e inizializzo gradcamA e gradcamB (senza i layer)
-        self.first_layer = "17"
+        self.first_layer = "18"
         self.layers = []
         self.gradcamG_A = GradCam(model=self.netG_img_A, discriminator=self.netD_A, feature_module=self.netG_img_A.module.model, use_cuda=True)
         self.gradcamG_B = GradCam(model=self.netG_img_B, discriminator=self.netD_B, feature_module=self.netG_img_B.module.model, use_cuda=True)
@@ -258,9 +258,9 @@ class UAGGANModel(BaseModel):
             masked_fake_A *= self.att_B
         self.loss_G_B = self.criterionGAN(self.netD_B(self.masked_fake_A), True)
         # Forward cycle loss || G_B(G_A(A)) - A||
-        self.loss_cycle_A = self.criterionCycle(self.cycle_masked_fake_A, self.real_A) * lambda_A * 0.1
+        self.loss_cycle_A = self.criterionCycle(self.cycle_masked_fake_A, self.real_A) * lambda_A 
         # Backward cycle loss || G_A(G_B(B)) - B||
-        self.loss_cycle_B = self.criterionCycle(self.cycle_masked_fake_B, self.real_B) * lambda_B * 0.1
+        self.loss_cycle_B = self.criterionCycle(self.cycle_masked_fake_B, self.real_B) * lambda_B 
 
         #Faccio Unsqueeze per ottenere la dimensione conforme all'applicazione della loss
         self.cam_fake_B = self.cam_fake_B.unsqueeze(1)
