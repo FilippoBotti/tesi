@@ -8,6 +8,10 @@ from torch.optim import lr_scheduler
 ###############################################################################
 # Helper Functions
 ###############################################################################
+class Identity(nn.Module):
+    def forward(self, x):
+        return x
+        
 def get_norm_layer(norm_type='instance'):
     """Return a normalization layer
 
@@ -22,7 +26,8 @@ def get_norm_layer(norm_type='instance'):
     elif norm_type == 'instance':
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
     elif norm_type == 'none':
-        norm_layer = None
+        def norm_layer(x):
+            return Identity()
     else:
         raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
     return norm_layer

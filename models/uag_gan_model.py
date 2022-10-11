@@ -330,14 +330,15 @@ class UAGGANModel(BaseModel):
 
         self.netG_att_A = uag.define_net_att(opt.input_nc,
                                              opt.ngf,
-                                             norm=opt.norm,
+                                             norm="none",
                                              init_type=opt.init_type,
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
+       
 
         self.netG_att_B = uag.define_net_att(opt.input_nc,
                                              opt.ngf,
-                                             norm=opt.norm,
+                                             norm="none",
                                              init_type=opt.init_type,
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
