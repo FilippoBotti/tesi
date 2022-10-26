@@ -345,7 +345,7 @@ class UAGGANModel(BaseModel):
         self.netG_img_A = uag.define_net_img(opt.input_nc,
                                              opt.output_nc,
                                              opt.ngf,
-                                             norm='none',
+                                             norm=opt.norm,
                                              init_type=opt.init_type,
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
@@ -353,7 +353,7 @@ class UAGGANModel(BaseModel):
         self.netG_img_B = uag.define_net_img(opt.input_nc,
                                              opt.output_nc,
                                              opt.ngf,
-                                             norm='none',
+                                             norm=opt.norm,
                                              init_type=opt.init_type,
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
