@@ -49,7 +49,8 @@ class UAGGANModel(BaseModel):
                                              init_type=opt.init_type,
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
-
+        self.backbone = self.opt.backbone
+        self.use_gradcam = self.opt.use_gradcam
         if self.backbone == "cyclegan":
             self.netG_img_A = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
                                             not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
