@@ -279,7 +279,7 @@ class UAGGANModel(BaseModel):
         # forward
         if epoch > self.epoch_count:
             self.epoch_count = epoch
-            print("Epoch: " + epoch + " use_mask_for_D: " + self.use_mask_for_D)
+            print(f"Epoch: {epoch} use_mask_for_D: {self.use_mask_for_D}")
         self.forward()      # compute fake images and reconstruction images.
         # G_A and G_B
         nets = [self.netD_A, self.netD_B]
