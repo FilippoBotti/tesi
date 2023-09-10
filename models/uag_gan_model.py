@@ -49,8 +49,8 @@ class UAGGANModel(BaseModel):
                                              init_type=opt.init_type,
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
-        self.backbone = self.opt.backbone
-        self.use_gradcam = self.opt.use_gradcam
+
+
         if self.backbone == "cyclegan":
             self.netG_img_A = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
                                             not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
@@ -90,6 +90,11 @@ class UAGGANModel(BaseModel):
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
         
+        self.backbone = self.opt.backbone
+        self.use_gradcam = self.opt.use_gradcam
+        self.use_mask_for_D = False
+        self.epoch_count = 0
+
         if self.isTrain:
             if self.opt.use_mask_for_D:
                 self.masked_fake_A_pool = ImageMaskPool(opt.pool_size)
@@ -218,14 +223,14 @@ class UAGGANModel(BaseModel):
         return loss_D
 
     def backward_D(self):
-        if self.opt.use_mask_for_D:
+        if self.use_mask_for_D:
             masked_fake_B, att_A = self.masked_fake_B_pool.query(self.masked_fake_B, self.att_A)
             masked_fake_B *= att_A
         else:
             masked_fake_B = self.masked_fake_B_pool.query(self.masked_fake_B)
         self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, masked_fake_B)
 
-        if self.opt.use_mask_for_D:
+        if self.use_mask_for_D:
             masked_fake_A, att_B = self.masked_fake_A_pool.query(self.masked_fake_A, self.att_B)
             masked_fake_A *= att_B
         else:
@@ -270,11 +275,16 @@ class UAGGANModel(BaseModel):
     def optimize_parameters(self, epoch):
         """Calculate losses, gradients, and update network weights; called in every training iteration"""
         # forward
+        if epoch > self.epoch_count:
+            self.epoch_count = epoch
+            print("Epoch: " + epoch + " use_mask_for_D: " + self.use_mask_for_D)
         self.forward()      # compute fake images and reconstruction images.
         # G_A and G_B
         nets = [self.netD_A, self.netD_B]
-        if epoch > 60 and self.opt.use_early_stopping:
+        if epoch > 30:
+            self.use_mask_for_D = True
             nets += [self.netG_att_A, self.netG_att_B] # Ds require no gradients when optimizing Gs
+
         self.set_requires_grad(nets, False)
         self.optimizer_G.zero_grad()  # set G_A and G_B's gradients to zero
         self.backward_G()             # calculate gradients for G_A and G_B
@@ -282,5 +292,5 @@ class UAGGANModel(BaseModel):
         # D_A and D_B
         self.set_requires_grad([self.netD_A, self.netD_B], True)
         self.optimizer_D.zero_grad()   # set D_A and D_B's gradients to zero
-        self.backward_D()        # calculate gradients for D_A
+        self.backward_D()        # calculate gradients for D
         self.optimizer_D.step()  # update D_A and D_B's weights
