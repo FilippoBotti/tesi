@@ -35,6 +35,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
         parser.add_argument('--lr_policy', type=str, default='linear', help='learning rate policy. [linear | step | plateau | cosine]')
         parser.add_argument('--lr_decay_iters', type=int, default=40, help='multiply by a gamma every lr_decay_iters iterations')
-
+        parser.add_argument('--backbone', type=str, default='uaggan', help='cyclegan or uaggan backbone etc')
+        parser.add_argument('--use_gradcam', type=bool, default=False, help='compute attention with gradcam')
         self.isTrain = True
         return parser
