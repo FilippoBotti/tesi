@@ -35,6 +35,11 @@ class UAGGANModel(BaseModel):
         else:  # during test time, only load Gs
             self.model_names = ['G_att_A', 'G_att_B', 'G_img_A', 'G_img_B']
         
+        self.backbone = self.opt.backbone
+        self.use_gradcam = self.opt.use_gradcam
+        self.use_mask_for_D = False
+        self.epoch_count = 0
+
 
         self.netG_att_A = uag.define_net_att(opt.input_nc,
                                              opt.ngf,
@@ -90,10 +95,7 @@ class UAGGANModel(BaseModel):
                                              init_gain=opt.init_gain,
                                              gpu_ids=opt.gpu_ids)
         
-        self.backbone = self.opt.backbone
-        self.use_gradcam = self.opt.use_gradcam
-        self.use_mask_for_D = False
-        self.epoch_count = 0
+
 
         if self.isTrain:
             if self.opt.use_mask_for_D:
