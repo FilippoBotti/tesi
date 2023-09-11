@@ -225,19 +225,25 @@ class UAGGANModel(BaseModel):
         return loss_D
 
     def backward_D(self):
-        if self.use_mask_for_D:
-            masked_fake_B, att_A = self.masked_fake_B_pool.query(self.masked_fake_B, self.att_A)
-            masked_fake_B *= att_A
-        else:
-            masked_fake_B = self.masked_fake_B_pool.query(self.masked_fake_B)
-        self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, masked_fake_B)
+        masked_fake_B = self.masked_fake_B
+        masked_fake_A = self.masked_fake_A
+
+        real_B = self.real_B * self.att_B
+        real_A = self.real_A * self.att_A
 
         if self.use_mask_for_D:
-            masked_fake_A, att_B = self.masked_fake_A_pool.query(self.masked_fake_A, self.att_B)
-            masked_fake_A *= att_B
+            masked_fake_B *= self.att_A
+            masked_fake_B= self.masked_fake_B_pool.query(masked_fake_B)
         else:
-            masked_fake_A = self.masked_fake_A_pool.query(self.masked_fake_A)
-        self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, masked_fake_A)
+            masked_fake_B = self.masked_fake_B_pool.query(masked_fake_B)
+        self.loss_D_A = self.backward_D_basic(self.netD_A, real_B, masked_fake_B)
+
+        if self.use_mask_for_D:
+            masked_fake_A *= self.att_B
+            masked_fake_A = self.masked_fake_A_pool.query(masked_fake_A)
+        else:
+            masked_fake_A = self.masked_fake_A_pool.query(masked_fake_A)
+        self.loss_D_B = self.backward_D_basic(self.netD_B, real_A, masked_fake_A)
 
     def backward_G(self):
         """Calculate the loss for generators G_A and G_B"""
@@ -246,14 +252,14 @@ class UAGGANModel(BaseModel):
 
         # GAN loss D_A(G(A))
         masked_fake_B = self.masked_fake_B
-        if self.opt.use_mask_for_D:
+        if self.use_mask_for_D:
             masked_fake_B *= self.att_A
-        self.loss_G_A = self.criterionGAN(self.netD_A(self.masked_fake_B), True)
+        self.loss_G_A = self.criterionGAN(self.netD_A(masked_fake_B), True)
         # GAN loss D_B(G(B))
         masked_fake_A = self.masked_fake_A
-        if self.opt.use_mask_for_D:
+        if self.use_mask_for_D:
             masked_fake_A *= self.att_B
-        self.loss_G_B = self.criterionGAN(self.netD_B(self.masked_fake_A), True)
+        self.loss_G_B = self.criterionGAN(self.netD_B(masked_fake_A), True)
         # Forward cycle loss || G_B(G_A(A)) - A||
         self.loss_cycle_A = self.criterionCycle(self.cycle_masked_fake_A, self.real_A) * lambda_A 
         # Backward cycle loss || G_A(G_B(B)) - B||
