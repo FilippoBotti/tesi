@@ -145,6 +145,9 @@ class UAGGANModel(BaseModel):
         self.real_A = input['A' if AtoB else 'B'].to(self.device)
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
+        if self.opt.dataset_mode == 'template':
+            self.mask_A = input['A_mask']
+            self.mask_B = input['B_mask']
 
     def forward(self):
         #img fake generate
@@ -178,26 +181,45 @@ class UAGGANModel(BaseModel):
             self.cam_rec_B = self.gradcamG_A(zebraRec,self.first_layer,None).unsqueeze(0)
 
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
-        # G(A) -> B
-        self.att_A = self.netG_att_A(self.real_A)
-        if not self.isTrain:
-            self.att_A *= (self.att_A>self.opt.thresh).float()
-        self.masked_fake_B = self.fake_B*self.att_A + self.real_A*(1-self.att_A)
-        # G(B) -> A
-        self.att_B = self.netG_att_B(self.real_B)
-        if not self.isTrain:
-            self.att_B *= (self.att_B>self.opt.thresh).float()
-        self.masked_fake_A = self.fake_A*self.att_B + self.real_B*(1-self.att_B)
+        if self.opt.dataset_mode == 'template':
+            self.att_A = self.mask_A
+            self.cycle_att_A = self.att_A
+            self.cycle_att_B = self.att_B
+            self.att_B = self.mask_B
+            
+            self.masked_fake_B = self.fake_B*self.att_A + self.real_A*(1-self.att_A)
+            self.masked_fake_A = self.fake_A*self.att_B + self.real_B*(1-self.att_B)
+        
+            self.cycle_fake_A = self.netG_img_B(self.masked_fake_B)
+            self.cycle_masked_fake_A = self.cycle_fake_A*self.cycle_att_B + self.masked_fake_B*(1-self.cycle_att_B)
+            self.cycle_fake_B = self.netG_img_A(self.masked_fake_A)
+            self.cycle_masked_fake_B = self.cycle_fake_B*self.cycle_att_A + self.masked_fake_A*(1-self.cycle_att_A)
+        
+        else:
+            # G(A) -> B
+            self.att_A = self.netG_att_A(self.real_A)
+            if not self.isTrain:
+                self.att_A *= (self.att_A>self.opt.thresh).float()
+            self.masked_fake_B = self.fake_B*self.att_A + self.real_A*(1-self.att_A)
+            # G(B) -> A
+            self.att_B = self.netG_att_B(self.real_B)
+            if not self.isTrain:
+                self.att_B *= (self.att_B>self.opt.thresh).float()
+            self.masked_fake_A = self.fake_A*self.att_B + self.real_B*(1-self.att_B)
 
-        # cycle G(G(A)) -> A
-        self.cycle_att_B = self.netG_att_B(self.masked_fake_B)
-        self.cycle_fake_A = self.netG_img_B(self.masked_fake_B)
-        self.cycle_masked_fake_A = self.cycle_fake_A*self.cycle_att_B + self.masked_fake_B*(1-self.cycle_att_B)
-        # cycle G(G(B)) -> B
-        self.cycle_att_A = self.netG_att_A(self.masked_fake_A)
-        self.cycle_fake_B = self.netG_img_A(self.masked_fake_A)
-        self.cycle_masked_fake_B = self.cycle_fake_B*self.cycle_att_A + self.masked_fake_A*(1-self.cycle_att_A)
+            # cycle G(G(A)) -> A
+            self.cycle_att_B = self.netG_att_B(self.masked_fake_B)
+            self.cycle_fake_A = self.netG_img_B(self.masked_fake_B)
+            self.cycle_masked_fake_A = self.cycle_fake_A*self.cycle_att_B + self.masked_fake_B*(1-self.cycle_att_B)
+            # cycle G(G(B)) -> B
+            self.cycle_att_A = self.netG_att_A(self.masked_fake_A)
+            self.cycle_fake_B = self.netG_img_A(self.masked_fake_A)
+            self.cycle_masked_fake_B = self.cycle_fake_B*self.cycle_att_A + self.masked_fake_A*(1-self.cycle_att_A)
 
+        self.real_A_masked = self.real_A * self.att_A
+        self.real_B_masked = self.real_B * self.att_B
+        self.fake_A_masked = self.fake_A*self.att_B
+        self.fake_B_masked = self.fake_B*self.att_A
         # just for visualization
         self.att_A_viz, self.att_B_viz = (self.att_A-0.5)/0.5, (self.att_B-0.5)/0.5
 
@@ -225,25 +247,19 @@ class UAGGANModel(BaseModel):
         return loss_D
 
     def backward_D(self):
-        masked_fake_B = self.masked_fake_B
-        masked_fake_A = self.masked_fake_A
-
-        self.real_B *= self.att_B
-        self.real_A *= self.att_A
+        if self.use_mask_for_D:
+            masked_fake_B = self.masked_fake_B_pool.query(self.fake_B_masked)
+            self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B_masked.detach(), masked_fake_B)
+        else:
+            masked_fake_B = self.masked_fake_B_pool.query(self.masked_fake_B)
+            self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B.detach(), masked_fake_B)
 
         if self.use_mask_for_D:
-            masked_fake_B *= self.att_A
-            masked_fake_B= self.masked_fake_B_pool.query(masked_fake_B)
+            masked_fake_A = self.masked_fake_A_pool.query(self.fake_A_masked)
+            self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_B_masked.detach(), masked_fake_A)
         else:
-            masked_fake_B = self.masked_fake_B_pool.query(masked_fake_B)
-        self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, masked_fake_B)
-
-        if self.use_mask_for_D:
-            masked_fake_A *= self.att_B
-            masked_fake_A = self.masked_fake_A_pool.query(masked_fake_A)
-        else:
-            masked_fake_A = self.masked_fake_A_pool.query(masked_fake_A)
-        self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, masked_fake_A)
+            masked_fake_A = self.masked_fake_A_pool.query(self.masked_fake_A)
+            self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A_masked.detach(), masked_fake_A)
 
     def backward_G(self):
         """Calculate the loss for generators G_A and G_B"""
@@ -253,13 +269,15 @@ class UAGGANModel(BaseModel):
         # GAN loss D_A(G(A))
         masked_fake_B = self.masked_fake_B
         if self.use_mask_for_D:
-            masked_fake_B *= self.att_A
-        self.loss_G_A = self.criterionGAN(self.netD_A(masked_fake_B), True)
+            self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B_masked), True)
+        else:
+            self.loss_G_A = self.criterionGAN(self.netD_A(masked_fake_B), True)
         # GAN loss D_B(G(B))
         masked_fake_A = self.masked_fake_A
         if self.use_mask_for_D:
-            masked_fake_A *= self.att_B
-        self.loss_G_B = self.criterionGAN(self.netD_B(masked_fake_A), True)
+            self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A_masked), True)
+        else:
+            self.loss_G_B = self.criterionGAN(self.netD_B(masked_fake_A), True)
         # Forward cycle loss || G_B(G_A(A)) - A||
         self.loss_cycle_A = self.criterionCycle(self.cycle_masked_fake_A, self.real_A) * lambda_A 
         # Backward cycle loss || G_A(G_B(B)) - B||
