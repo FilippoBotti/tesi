@@ -102,7 +102,6 @@ class TemplateDataset(BaseDataset):
         # apply image transformation
         A, A_mask = random_transform(A_img, A_mask)
         B, B_mask  = random_transform(B_img, B_mask)
-        print(self.transform_A, self.transform_B)
 
         return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path, 'A_mask': A_mask, 'B_mask': B_mask,
                 'A_mask_paths': A_mask_path, 'B_mask_paths': B_mask_path,}

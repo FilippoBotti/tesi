@@ -5,6 +5,8 @@ from .base_model import BaseModel
 from . import networks 
 from . import uag_networks as uag
 from gradcam import *
+import matplotlib.pyplot as plt
+
 
 class UAGGANModel(BaseModel):
     '''
@@ -146,8 +148,8 @@ class UAGGANModel(BaseModel):
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
         if self.opt.dataset_mode == 'template':
-            self.mask_A = input['A_mask']
-            self.mask_B = input['B_mask']
+            self.mask_A = input['A_mask'].to(self.device)
+            self.mask_B = input['B_mask'].to(self.device)
 
     def forward(self):
         #img fake generate
@@ -183,10 +185,22 @@ class UAGGANModel(BaseModel):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         if self.opt.dataset_mode == 'template':
             self.att_A = self.mask_A
+            self.att_B = self.mask_B
             self.cycle_att_A = self.att_A
             self.cycle_att_B = self.att_B
-            self.att_B = self.mask_B
             
+            # with torch.no_grad():
+            #   fig, ax = plt.subplots(1,4, figsize=(5*3,5))
+            #   ax[0].imshow(self.real_A.squeeze().permute(1,2,0).cpu().numpy())
+            #   ax[0].set_title("original")
+            #   ax[1].imshow(self.mask_A[0].permute(1,2,0).cpu())
+            #   ax[1].set_title("mask_A")
+            #   ax[2].imshow(self.real_B.squeeze().permute(1,2,0).cpu().numpy())
+            #   ax[2].set_title("original 2")
+            #   ax[3].imshow(self.mask_B[0].permute(1,2,0).cpu())
+            #   ax[3].set_title("mask_B")
+            #   fig.savefig('A-B.png')
+
             self.masked_fake_B = self.fake_B*self.att_A + self.real_A*(1-self.att_A)
             self.masked_fake_A = self.fake_A*self.att_B + self.real_B*(1-self.att_B)
         
