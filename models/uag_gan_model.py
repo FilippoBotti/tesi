@@ -252,14 +252,14 @@ class UAGGANModel(BaseModel):
             self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B_masked.detach(), masked_fake_B)
         else:
             masked_fake_B = self.masked_fake_B_pool.query(self.masked_fake_B)
-            self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B.detach(), masked_fake_B)
+            self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, masked_fake_B)
 
         if self.use_mask_for_D:
             masked_fake_A = self.masked_fake_A_pool.query(self.fake_A_masked)
             self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_B_masked.detach(), masked_fake_A)
         else:
             masked_fake_A = self.masked_fake_A_pool.query(self.masked_fake_A)
-            self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A_masked.detach(), masked_fake_A)
+            self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, masked_fake_A)
 
     def backward_G(self):
         """Calculate the loss for generators G_A and G_B"""
@@ -308,7 +308,8 @@ class UAGGANModel(BaseModel):
         # G_A and G_B
         nets = [self.netD_A, self.netD_B]
         if epoch > 30:
-            self.use_mask_for_D = True
+            if self.opt.use_mask_for_D:
+                self.use_mask_for_D = True
             nets += [self.netG_att_A, self.netG_att_B] # Ds require no gradients when optimizing Gs
 
         self.set_requires_grad(nets, False)
